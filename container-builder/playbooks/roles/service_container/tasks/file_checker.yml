@@ -1,0 +1,13 @@
+---
+
+- name: Check if additional files exist for Container
+  stat: path="{{ role_path }}/files/{{ item }}"
+  register: st
+
+- name: Copy additional files
+  copy: src={{ src_item }}  dest=/tmp/{{ item }}/ mode=0777
+  with_fileglob:
+    - "{{ role_path }}/files/{{ item }}/*"
+  loop_control:
+    loop_var: src_item
+  when: st.stat.isdir is defined and st.stat.isdir

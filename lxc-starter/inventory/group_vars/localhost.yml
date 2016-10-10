@@ -1,0 +1,30 @@
+---
+gateway: 192.168.1.4
+lxc_containers:
+  con1: 
+    ip: 192.168.1.111
+    mac: de:ad:be:ef:ba:11
+  con2: 
+    ip: 192.168.1.112
+    mac: de:ad:be:ef:ba:12
+  con3: 
+    ip: 192.168.1.113
+    mac: de:ad:be:ef:ba:13
+  con4: 
+    ip: 192.168.1.114
+    mac: de:ad:be:ef:ba:14
+  con5: 
+    ip: 192.168.1.115
+    mac: de:ad:be:ef:ba:15
+  con6: 
+    ip: 192.168.1.116
+    mac: de:ad:be:ef:ba:16
+  con7: 
+    ip: 192.168.1.117
+    mac: de:ad:be:ef:ba:17
+  con8: 
+    ip: 192.168.1.118
+    mac: de:ad:be:ef:ba:18
+  con9: 
+    ip: 192.168.1.119
+    mac: de:ad:be:ef:ba:19

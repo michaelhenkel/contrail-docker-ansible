@@ -1,0 +1,71 @@
+---
+- name: create lxc container
+  lxc_container:
+    name: "{{ item.key }}"
+    container_log: true
+    template: download
+#    container_config:
+#      - "lxc.rootfs = /var/lib/lxc/con1/rootfs"
+#      - "lxc.utsname = {{ item.key}}"
+#      - "lxc.network.type = veth"
+#      - "lxc.network.flags = up"
+#      - "lxc.network.script.up = /etc/lxc/ifup"
+#      - "lxc.network.script.down = /etc/lxc/ifdown"
+#      - "lxc.network.veth.pair = {{ item.key}}"
+#      - "lxc.network.hwaddr = {{ item.value.mac}}"
+#      - "lxc.network.ipv4 = {{ item.value.ip }}/24"
+#      - "lxc.network.ipv4.gateway = {{ gateway }}"
+#      - "lxc.aa_profile = unconfined"
+#      - "lxc.cgroup.devices.allow = a"
+#      - "lxc.cap.drop ="
+    state: stopped
+    template_options: -d ubuntu -r xenial -a amd64
+  with_dict: "{{ lxc_containers }}"
+
+- name: create lxc container config
+  template: src=config.j2 dest=/var/lib/lxc/{{ item.key }}/config force=yes
+  with_dict: "{{ lxc_containers }}"
+
+- name: create cert dir
+  file: path="/var/lib/lxc/{{ item.key }}/rootfs/usr/local/share/ca-certificates/docker-dev-cert/" state=directory mode=0755
+  with_dict: "{{ lxc_containers }}"
+
+- name: copy cert
+  copy: src=devdockerCA.crt dest="/var/lib/lxc/{{ item.key }}/rootfs/usr/local/share/ca-certificates/docker-dev-cert/devdockerCA.crt"
+  with_dict: "{{ lxc_containers }}"
+
+- name: copy shadow
+  copy: src=shadow dest="/var/lib/lxc/{{ item.key }}/rootfs/etc/shadow"
+  with_dict: "{{ lxc_containers }}"
+
+- name: start lxc containers
+  lxc_container:
+    name: "{{ item.key }}"
+    state: started
+  with_dict: "{{ lxc_containers }}"
+
+- name: configure lxc container
+  lxc_container:
+    name: "{{ item.key }}"
+    container_command: |
+      rm /etc/resolv.conf
+      echo "nameserver 8.8.8.8" > /etc/resolv.conf
+      apt-get update
+      apt-get install -y openssh-server python
+      echo "PasswordAuthentication yes" >> /etc/ssh/sshd_config
+      sed -i 's/PermitRootLogin prohibit-password/PermitRootLogin yes/g' /etc/ssh/sshd_config
+      service ssh restart
+      update-ca-certificates
+  with_dict: "{{ lxc_containers }}"
+
+- name: create .ssh dir
+  file: path="/var/lib/lxc/{{ item.key }}/rootfs/root/.ssh/" state=directory mode=0700
+  with_dict: "{{ lxc_containers }}"
+
+- name: copy auth keys
+  copy: src=authorized_keys dest="/var/lib/lxc/{{ item.key }}/rootfs/root/.ssh/authorized_keys" mode=0600
+  with_dict: "{{ lxc_containers }}"
+
+- name: remove known hosts
+  command: "ssh-keygen -f /root/.ssh/known_hosts -R {{ item.value.ip }}"
+  with_dict: "{{ lxc_containers }}"

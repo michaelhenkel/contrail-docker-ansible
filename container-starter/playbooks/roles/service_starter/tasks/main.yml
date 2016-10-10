@@ -1,0 +1,45 @@
+---
+#- name: Install Docker
+#  include: install_docker.yml
+
+- name: Set State
+  set_fact:
+    state: present
+  when: state is not defined
+
+- name: Set Listen Address
+  set_fact:
+    listen_address: "{{ hostvars[inventory_hostname]['ansible_' + interface] }}"
+  when: interface is defined and interface
+
+- name: Set Listen Address 2
+  set_fact:
+    listen_address: "{{ ansible_default_ipv4['address'] }}"
+  when: interace is not defined
+
+- name: Contrail Controller Container
+  include: controller.yml
+  when: listen_address in groups['controller']
+
+- name: Contrail Analytics Database
+  include: analytics_db.yml
+  when: listen_address in groups['analytics-db']
+
+- name: Contrail Analytics
+  include: analytics.yml
+  when: listen_address in groups['analytics']
+
+- wait_for: host="{{ controller_vip }}" port=8082 delay=10
+  when: state == "present"
+
+- name: Register Controller
+  include: register_controller.yml
+  when: (listen_address in groups['controller'] and state == "present")
+
+- name: Register Analytics
+  include: register_analytics.yml
+  when: (listen_address in groups['analytics'] and state == "present")
+
+#- name: Contrail Compute
+#  include: compute.yml
+#  when: listen_address in groups['compute']

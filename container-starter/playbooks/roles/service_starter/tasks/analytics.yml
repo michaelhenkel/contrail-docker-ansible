@@ -1,0 +1,132 @@
+---
+- name: Create Env File
+  file: path=/tmp/analytics_common.env state=touch
+
+- name: Set Cassandra Listen Address String
+  set_fact:
+     cassandra_listen_address_string: "{{  groups['analytics-db'] | map('extract', hostvars, ['listen_address']) | join(':9042,') }}:9042"
+
+- name: Set Zookeeper Listen Address String
+  set_fact:
+     zk_listen_address_string: "{{  groups['controller'] | map('extract', hostvars, ['listen_address']) | join(':2181,') }}:2181"
+
+- name: Set Zookeeper Server List
+  set_fact:
+     zookeeper__server_list: "{{  groups['controller'] | map('extract', hostvars, ['listen_address']) | join(':2888:3888,') }}:2888:3888"
+
+- name: Set Kafka Server List
+  set_fact:
+     kafka_server_list: "{{  groups['controller'] | map('extract', hostvars, ['listen_address']) | join(':9092,') }}:9092"
+
+- name: Set Rabbit Server List
+  set_fact:
+     rabbit_server_list: "{{  groups['controller'] | map('extract', hostvars, ['listen_address']) | join(':5672,') }}:5672"
+
+- name: Add Extra Vars
+  template: src=all_vars.env.j2 dest=/tmp/analytics_common.env force=true
+  when: variables is defined and variables
+
+- lineinfile: dest=/etc/hosts regexp='^{{ hostvars[item]['listen_address'] }}' line='{{ hostvars[item]['listen_address'] }} {{ hostvars[item]['ansible_hostname'] }}'
+  with_items: "{{ groups['analytics'] }}"
+
+- lineinfile: dest=/etc/hosts regexp='^{{ hostvars[item]['listen_address'] }}' line='{{ hostvars[item]['listen_address'] }} {{ hostvars[item]['ansible_hostname'] }}'
+  with_items: "{{ groups['controller'] }}"
+
+- lineinfile: dest=/tmp/analytics_common.env regexp='^contrail__controller_vip' line='contrail__controller_vip={{ controller_vip }}'
+
+- lineinfile: dest=/tmp/analytics_common.env regexp='^contrail_analytics_api__DEFAULTS__host_ip' line='contrail_analytics_api__DEFAULTS__host_ip={{ listen_address }}'
+- lineinfile: dest=/tmp/analytics_common.env regexp='^contrail_analytics_api__DEFAULTS__cassandra_server_list' line='contrail_analytics_api__DEFAULTS__cassandra_server_list={{ cassandra_listen_address_string }}'
+- lineinfile: dest=/tmp/analytics_common.env regexp='^contrail_analytics_api__DISCOVERY__disc_server_ip' line='contrail_analytics_api__DISCOVERY__disc_server_ip={{ controller_vip }}'
+- lineinfile: dest=/tmp/analytics_common.env regexp='^contrail_analytics_api__DEFAULTS__auth' line='contrail_analytics_api__DEFAULTS__auth=no-auth'
+
+- lineinfile: dest=/tmp/analytics_common.env regexp='^contrail_collector__DEFAULT__cassandra_server_list' line='contrail_collector__DEFAULT__cassandra_server_list={{ cassandra_listen_address_string }}'
+- lineinfile: dest=/tmp/analytics_common.env regexp='^contrail_collector__DEFAULT__kafka_broker_list' line='contrail_collector__DEFAULT__kafka_broker_list={{ kafka_server_list }}'
+- lineinfile: dest=/tmp/analytics_common.env regexp='^contrail_collector__DEFAULT__zookeeper_server_list' line='contrail_collector__DEFAULT__zookeeper_server_list={{ zk_listen_address_string }}'
+- lineinfile: dest=/tmp/analytics_common.env regexp='^contrail_collector__DEFAULT__hostip' line='contrail_collector__DEFAULT__hostip={{ listen_address }}'
+- lineinfile: dest=/tmp/analytics_common.env regexp='^contrail_collector__DISCOVERY__server' line='contrail_collector__DISCOVERY__server={{ controller_vip }}'
+
+- lineinfile: dest=/tmp/analytics_common.env regexp='^contrail_query_engine__DEFAULT__cassandra_server_list' line='contrail_query_engine__DEFAULT__cassandra_server_list={{ cassandra_listen_address_string }}'
+- lineinfile: dest=/tmp/analytics_common.env regexp='^contrail_query_engine__DEFAULT__hostip' line='contrail_query_engine__DEFAULT__hostip={{ listen_address }}'
+- lineinfile: dest=/tmp/analytics_common.env regexp='^contrail_query_engine__DISCOVERY__server' line='contrail_query_engine__DISCOVERY__server={{ controller_vip }}'
+
+- lineinfile: dest=/tmp/analytics_common.env regexp='^contrail_topology__DEFAULTS__analytics_api' line='contrail_topology__DEFAULTS__analytics_api={{ analytics_vip }}'
+- lineinfile: dest=/tmp/analytics_common.env regexp='^contrail_topology__DEFAULTS__zookeeper' line='contrail_topology__DEFAULTS__zookeeper={{ zk_listen_address_string }}'
+
+- lineinfile: dest=/tmp/analytics_common.env regexp='^contrail_snmp_collector__DEFAULTS__api_server' line='contrail_snmp_collector__DEFAULTS__api_server={{ analytics_vip }}'
+- lineinfile: dest=/tmp/analytics_common.env regexp='^contrail_snmp_collector__DEFAULTS__zookeeper' line='contrail_snmp_collector__DEFAULTS__zookeeper={{ zk_listen_address_string }}'
+- lineinfile: dest=/tmp/analytics_common.env regexp='^contrail_snmp_collector__DISCOVERY__disc_server_ip' line='contrail_snmp_collector__DISCOVERY__disc_server_ip={{ controller_vip }}'
+
+- lineinfile: dest=/tmp/analytics_common.env regexp='^contrail_alarm_gen__DEFAULTS__host_ip' line='contrail_alarm_gen__DEFAULTS__host_ip={{ listen_address }}'
+- lineinfile: dest=/tmp/analytics_common.env regexp='^contrail_alarm_gen__DEFAULTS__kafka_broker_list' line='contrail_alarm_gen__DEFAULTS__kafka_broker_list={{ kafka_server_list }}'
+- lineinfile: dest=/tmp/analytics_common.env regexp='^contrail_alarm_gen__DEFAULTS__zk_list' line='contrail_alarm_gen__DEFAULTS__zk_list={{ zk_listen_address_string }}'
+- lineinfile: dest=/tmp/analytics_common.env regexp='^contrail_alarm_gen__DEFAULTS__rabbitmq_server_list' line='contrail_alarm_gen__DEFAULTS__rabbitmq_server_list={{ rabbit_server_list }}'
+- lineinfile: dest=/tmp/analytics_common.env regexp='^contrail_alarm_gen__DISCOVERY__disc_server_ip' line='contrail_alarm_gen__DISCOVERY__disc_server_ip={{ controller_vip }}'
+
+- lineinfile: dest=/tmp/analytics_common.env regexp='^admin_user' line='admin_user={{ admin_user }}'
+
+- lineinfile: dest=/tmp/analytics_common.env regexp='^admin_password' line='admin_password={{ admin_password }}'
+- lineinfile: dest=/tmp/analytics_common.env regexp='^admin_token' line='admin_token={{ admin_token }}'
+- lineinfile: dest=/tmp/analytics_common.env regexp='^admin_tenant' line='admin_tenant={{ admin_tenant }}'
+
+
+- name: Pull Containers
+  command: docker pull "{{ REGISTRY }}/{{ item }}:{{ VERSION }}-{{ BUILD }}"
+  with_items: "{{ services }}"
+  when: state == "present"
+
+- docker_service:
+    project_name: contrail-analytics
+    state: "{{ state }}"
+    definition:
+      version: '2'
+      services:
+        analytics-network:
+          env_file: "/tmp/analytics_common.env"
+          image: "{{ REGISTRY }}/network:{{VERSION}}-{{ BUILD }}"
+          network_mode: "host"
+          restart: always
+        redis:
+          env_file: "/tmp/analytics_common.env"
+          image: "{{ REGISTRY }}/redis:{{VERSION}}-{{ BUILD }}"
+          network_mode: "service:analytics-network"
+          restart: always
+        contrail-analytics-api:
+          env_file: "/tmp/analytics_common.env"
+          image: "{{ REGISTRY }}/contrail-analytics-api:{{VERSION}}-{{ BUILD }}"
+          network_mode: "service:analytics-network"
+          restart: always
+        contrail-collector:
+          env_file: "/tmp/analytics_common.env"
+          image: "{{ REGISTRY }}/contrail-collector:{{VERSION}}-{{ BUILD }}"
+          network_mode: "service:analytics-network"
+          volumes:
+            - /etc/hosts:/etc/hosts
+          restart: always
+        contrail-query-engine:
+          env_file: "/tmp/analytics_common.env"
+          image: "{{ REGISTRY }}/contrail-query-engine:{{VERSION}}-{{ BUILD }}"
+          network_mode: "service:analytics-network"
+          restart: always
+        contrail-topology:
+          env_file: "/tmp/analytics_common.env"
+          image: "{{ REGISTRY }}/contrail-topology:{{VERSION}}-{{ BUILD }}"
+          network_mode: "service:analytics-network"
+          restart: always
+        contrail-snmp-collector:
+          env_file: "/tmp/analytics_common.env"
+          image: "{{ REGISTRY }}/contrail-snmp-collector:{{VERSION}}-{{ BUILD }}"
+          network_mode: "service:analytics-network"
+          restart: always
+        contrail-alarm-gen:
+          env_file: "/tmp/analytics_common.env"
+          image: "{{ REGISTRY }}/contrail-alarm-gen:{{VERSION}}-{{ BUILD }}"
+          network_mode: "service:analytics-network"
+          volumes:
+            - /etc/hosts:/etc/hosts
+          restart: always
+  register: output
+
+- set_fact:
+    contrail_analytics_api_name: "{{ item.key }}"
+  with_dict: "{{ output['ansible_facts']['contrail-analytics-api'] }}"
+  when: (state == "present" and output.ansible_facts is defined)

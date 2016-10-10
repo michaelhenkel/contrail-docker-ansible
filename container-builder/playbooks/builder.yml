@@ -1,0 +1,5 @@
+---
+- hosts: localhost
+  roles:
+   - base_container
+   - service_container

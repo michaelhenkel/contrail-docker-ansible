@@ -1,0 +1,66 @@
+---
+- file: path=/tmp/compute_common.env state=touch
+
+- name: Add Extra Vars
+  template: src=all_vars.env.j2 dest=/tmp/analytics_db_common.env force=true
+  when: variables is defined and variables
+
+- lineinfile: dest=/tmp/compute_common.env regexp='^contrail_api_server' line='contrail_api_server={{ controller_vip }}'
+- lineinfile: dest=/tmp/compute_common.env regexp='^socket_path' line='socket_path={{ controller_vip }}'
+- lineinfile: dest=/tmp/compute_common.env regexp='^vrouter__DISCOVERY_server' line='vrouter__DISCOVERY_server={{ controller_vip }}'
+- lineinfile: dest=/tmp/compute_common.env regexp='^vrouter__NETWORKS_control_network_ip' line='vrouter__NETWORKS_control_network_ip={{ ansible_default_ipv4['address'] }}'
+- lineinfile: dest=/tmp/compute_common.env regexp='^vrouter__VIRTUAL_HOST_INTERFACE_gateway' line='vrouter__VIRTUAL_HOST_INTERFACE_gateway={{ ansible_default_ipv4['gateway'] }}'
+- lineinfile: dest=/tmp/compute_common.env regexp='^vrouter__VIRTUAL_HOST_INTERFACE_physical_interface' line='vrouter__VIRTUAL_HOST_INTERFACE_physical_interface={{ ansible_default_ipv4['interface'] }}'
+- lineinfile: dest=/tmp/compute_common.env regexp='^ADMIN_USER' line='ADMIN_USER={{ admin_user }}'
+- lineinfile: dest=/tmp/compute_common.env regexp='^ADMIN_PASSWORD' line='ADMIN_PASSWORD={{ admin_password }}'
+- lineinfile: dest=/tmp/compute_common.env regexp='^ADMIN_TENANT' line='ADMIN_TENANT={{ admin_tenant }}'
+- lineinfile: dest=/tmp/compute_common.env regexp='^KEYSTONE_SERVER' line='KEYSTONE_SERVER={{ controller_vip }}'
+- set_fact:
+    cidr: "{{ ansible_default_ipv4.address }}/{{ ansible_default_ipv4.netmask }}"
+    #cidr: "{{ '192.168.1.140/255.255.255.0' | ipaddr('prefix') }}"
+    #cidr: "{{ '192.168.1.140/255.255.255.0' | ipaddr('prefix') }}"
+    #cidr: "{{ ansible_default_ipv4.address'/'ansible_default_ipv4.netmask | ipaddr('prefix') }}"
+
+- debug: msg="{{ cidr }}"
+- debug: msg="{{ ansible_default_ipv4 }}"
+
+- lineinfile: dest=/tmp/compute_common.env regexp='^cidr' line="cidr={{ cidr | ipaddr('prefix') }}"
+
+- name: Pull Containers
+  command: docker pull "{{ REGISTRY }}/{{ item }}:{{ VERSION }}-{{ BUILD }}"
+  with_items: "{{ services }}"
+
+- docker_service:
+    project_name: contrail-compute
+    state: "{{ state }}"
+    definition:
+      version: '2'
+      services:
+        contrail-vrouter-agent:
+          env_file: "/tmp/compute_common.env"
+          image: "{{ REGISTRY }}/contrail-vrouter-agent:{{VERSION}}-{{ BUILD }}"
+          network_mode: "host"
+          privileged: true
+          restart: always
+          volumes:
+            - /etc/redhat-release:/etc/redhat-release
+            - "/usr/src/linux-headers-{{ ansible_kernel }}:/usr/src/linux-headers-{{ ansible_kernel }}"
+            - /usr/src/linux-headers-3.13.0-85:/usr/src/linux-headers-3.13.0-85
+            - /lib/modules:/lib/modules
+            - /var/lib/contrail/ports
+        opencontrail-libnetwork:
+          image: "{{ REGISTRY }}/opencontrail-libnetwork:{{VERSION}}-{{ BUILD }}"
+          network_mode: "host"
+          depends_on:
+            - contrail-vrouter-agent
+          env_file: "/tmp/compute_common.env"
+          volumes:
+            - /run/docker/plugins:/run/docker/plugins
+          cap_add:
+            - NET_ADMIN
+          volumes_from:
+            - contrail-vrouter-agent
+          restart: always
+  register: output
+
+- debug: var=output

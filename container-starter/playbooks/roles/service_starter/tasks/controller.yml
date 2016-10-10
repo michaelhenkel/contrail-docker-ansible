@@ -1,0 +1,268 @@
+---
+- name: Create Env File
+  file: path=/tmp/common.env state=touch
+
+- name: Set Cassandra Listen Address String
+  set_fact:
+     cassandra_listen_address_string: "{{  groups['controller'] | map('extract', hostvars, ['listen_address']) | join(':9042,') }}:9042"
+
+- name: Set Cassandra Listen Address String Without Port
+  set_fact:
+     cassandra_listen_address_wo_port_string: "{{  groups['controller'] | map('extract', hostvars, ['listen_address']) | join(',') }}"
+
+- name: Set IFMAP User List
+  set_fact:
+     ifmap_user_list: "{{  groups['controller'] | map('extract', hostvars, ['listen_address']) | join(',') }}"
+
+- name: Set Cassandra Listen Address String 9160
+  set_fact:
+     cassandra_listen_address_9160: "{{  groups['controller'] | map('extract', hostvars, ['listen_address']) | join(':9160,') }}:9160"
+
+- name: Set Zookeeper Listen Address String
+  set_fact:
+     zk_listen_address_string: "{{  groups['controller'] | map('extract', hostvars, ['listen_address']) | join(':2181,') }}:2181"
+
+- name: Set Rabbit Listen Address String
+  set_fact:
+     rabbit_listen_address_string: "{{  groups['controller'] | map('extract', hostvars, ['listen_address']) | join(':5672,') }}:5672"
+
+- name: Set Zookeeper Server List
+  set_fact:
+     zookeeper__server_list: "{{  groups['controller'] | map('extract', hostvars, ['listen_address']) | join(':2888:3888,') }}:2888:3888"
+
+- name: Add Extra Vars
+  template: src=all_vars.env.j2 dest=/tmp/common.env force=true
+  when: variables is defined and variables
+
+- name: Set Cluster Master
+  set_fact:
+    cluster_master={{ hostvars[groups['controller'][0]]['listen_address'] }}
+
+- name: Set Cluster Master Hostname
+  set_fact:
+    cluster_master_hostname={{ hostvars[groups['controller'][0]]['ansible_hostname'] }}
+
+- name: Get Zookeeper Id
+  set_fact:
+    my_zk_id: "{{ item.0 }}"
+  when: item.1 == listen_address
+  with_indexed_items: "{{ groups['controller'] }}"
+
+
+- lineinfile: dest=/etc/hosts regexp='^{{ hostvars[item]['listen_address'] }}' line='{{ hostvars[item]['listen_address'] }} {{ hostvars[item]['ansible_hostname'] }}'
+  with_items: "{{ groups['controller'] }}"
+
+- lineinfile: dest=/tmp/common.env regexp='^my_zk_id' line='my_zk_id={{ my_zk_id }}'
+- lineinfile: dest=/tmp/common.env regexp='^zookeeper__server_list' line='zookeeper__server_list={{ zookeeper__server_list }}'
+- lineinfile: dest=/tmp/common.env regexp='^zk_listen_address_string' line='zk_listen_address_string={{ zk_listen_address_string }}'
+
+- lineinfile: dest=/tmp/common.env regexp='^contrail__controller_vip' line='contrail__controller_vip={{ controller_vip }}'
+- lineinfile: dest=/tmp/common.env regexp='^myip' line='myip={{ listen_address }}'
+- lineinfile: dest=/tmp/common.env regexp='^ASN' line='ASN={{ ASN }}'
+
+- lineinfile: dest=/tmp/common.env regexp='^contrail_api__DEFAULTS__disc_server_ip' line='contrail_api__DEFAULTS__disc_server_ip={{ controller_vip }}'
+- lineinfile: dest=/tmp/common.env regexp='^contrail_api__DEFAULTS__cassandra_server_list' line='contrail_api__DEFAULTS__cassandra_server_list={{ cassandra_listen_address_9160 }}'
+- lineinfile: dest=/tmp/common.env regexp='^contrail_api__DEFAULTS__ifmap_username' line='contrail_api__DEFAULTS__ifmap_username={{ listen_address }}.api'
+- lineinfile: dest=/tmp/common.env regexp='^contrail_api__DEFAULTS__ifmap_password' line='contrail_api__DEFAULTS__ifmap_password={{ listen_address }}.api'
+- lineinfile: dest=/tmp/common.env regexp='^contrail_api__DEFAULTS__ifmap_server_ip' line='contrail_api__DEFAULTS__ifmap_server_ip={{ listen_address }}'
+- lineinfile: dest=/tmp/common.env regexp='^contrail_api__DEFAULTS__zookeeper_server_list' line='contrail_api__DEFAULTS__zookeeper_server_list={{ zk_listen_address_string }}'
+- lineinfile: dest=/tmp/common.env regexp='^contrail_api__DEFAULTS__rabbit_server' line='contrail_api__DEFAULTS__rabbit_server={{ rabbit_listen_address_string }}'
+
+- lineinfile: dest=/tmp/common.env regexp='^contrail_schema__DEFAULTS__disc_server_ip' line='contrail_schema__DEFAULTS__disc_server_ip={{ controller_vip }}'
+- lineinfile: dest=/tmp/common.env regexp='^contrail_schema__DEFAULTS__zk_server_ip' line='contrail_schema__DEFAULTS__zk_server_ip={{ zk_listen_address_string }}'
+- lineinfile: dest=/tmp/common.env regexp='^contrail_schema__DEFAULTS__cassandra_server_list' line='contrail_schema__DEFAULTS__cassandra_server_list={{ cassandra_listen_address_9160 }}'
+- lineinfile: dest=/tmp/common.env regexp='^contrail_schema__DEFAULTS__rabbit_server' line='contrail_schema__DEFAULTS__rabbit_server={{ rabbit_listen_address_string }}'
+- lineinfile: dest=/tmp/common.env regexp='^contrail_schema__DEFAULTS__ifmap_username' line='contrail_schema__DEFAULTS__ifmap_username={{ listen_address }}.schema'
+- lineinfile: dest=/tmp/common.env regexp='^contrail_schema__DEFAULTS__ifmap_password' line='contrail_schema__DEFAULTS__ifmap_password={{ listen_address }}.schema'
+
+- lineinfile: dest=/tmp/common.env regexp='^contrail_discovery__DEFAULTS__cassandra_server_list' line='contrail_discovery__DEFAULTS__cassandra_server_list={{ cassandra_listen_address_9160 }}'
+
+- lineinfile: dest=/tmp/common.env regexp='^contrail_svc_monitor__SCHEDULER__analytics_server_ip' line='contrail_svc_monitor__SCHEDULER__analytics_server_ip={{ analytics_vip }}'
+- lineinfile: dest=/tmp/common.env regexp='^contrail_svc_monitor__DEFAULTS__cassandra_server_list' line='contrail_svc_monitor__DEFAULTS__cassandra_server_list={{ cassandra_listen_address_9160 }}'
+- lineinfile: dest=/tmp/common.env regexp='^contrail_svc_monitor__DEFAULTS__ifmap_server_ip' line='contrail_svc_monitor__DEFAULTS__ifmap_server_ip={{ listen_address }}'
+- lineinfile: dest=/tmp/common.env regexp='^contrail_svc_monitor__DEFAULTS__ifmap_username' line='contrail_svc_monitor__DEFAULTS__ifmap_username={{ listen_address }}.svc_monitor'
+- lineinfile: dest=/tmp/common.env regexp='^contrail_svc_monitor__DEFAULTS__ifmap_password' line='contrail_svc_monitor__DEFAULTS__ifmap_password={{ listen_address }}.svc_monitor'
+- lineinfile: dest=/tmp/common.env regexp='^contrail_svc_monitor__DEFAULTS__zk_server_ip' line='contrail_svc_monitor__DEFAULTS__zk_server_ip={{ zk_listen_address_string }}'
+- lineinfile: dest=/tmp/common.env regexp='^contrail_svc_monitor__DEFAULTS__disc_server_ip' line='contrail_svc_monitor__DEFAULTS__disc_server_ip={{ controller_vip }}'
+- lineinfile: dest=/tmp/common.env regexp='^contrail_svc_monitor__DEFAULTS__rabbit_server' line='contrail_svc_monitor__DEFAULTS__rabbit_server={{ rabbit_listen_address_string }}'
+
+- lineinfile: dest=/tmp/common.env regexp='^contrail_dns__DEFAULT__rndc_secret' line='contrail_dns__DEFAULT__rndc_secret=sHE1SM8nsySdgsoRxwARtA=='
+- lineinfile: dest=/tmp/common.env regexp='^contrail_dns__DEFAULT__hostip' line='contrail_dns__DEFAULT__hostip={{ listen_address }}'
+- lineinfile: dest=/tmp/common.env regexp='^contrail_dns__IFMAP__password' line='contrail_dns__IFMAP__password={{ listen_address }}.dns'
+- lineinfile: dest=/tmp/common.env regexp='^contrail_dns__IFMAP__user' line='contrail_dns__IFMAP__user={{ listen_address }}.dns'
+- lineinfile: dest=/tmp/common.env regexp='^contrail_dns__DISCOVERY__server' line='contrail_dns__DISCOVERY__server={{ controller_vip }}'
+
+- lineinfile: dest=/tmp/common.env regexp='^contrail_named__rndc_secret' line='contrail_named__rndc_secret=sHE1SM8nsySdgsoRxwARtA=='
+- lineinfile: dest=/tmp/common.env regexp='^contrail_named__listen_address' line='contrail_named__listen_address={{ listen_address }}'
+
+- lineinfile: dest=/tmp/common.env regexp='^contrail_control__DEFAULT__hostip' line='contrail_control__DEFAULT__hostip={{ listen_address }}'
+- lineinfile: dest=/tmp/common.env regexp='^contrail_control__IFMAP__password' line='contrail_control__IFMAP__password={{ listen_address }}.control'
+- lineinfile: dest=/tmp/common.env regexp='^contrail_control__IFMAP__user' line='contrail_control__IFMAP__user={{ listen_address }}.control'
+- lineinfile: dest=/tmp/common.env regexp='^contrail_control__DISCOVERY__server' line='contrail_control__DISCOVERY__server={{ controller_vip }}'
+
+- lineinfile: dest=/tmp/common.env regexp='^contrail_device_manager__DEFAULTS__disc_server_ip' line='contrail_device_manager__DEFAULTS__disc_server_ip={{ controller_vip }}'
+
+- lineinfile: dest=/tmp/common.env regexp='^IFMAP_USER' line='IFMAP_USER={{ ifmap_user_list }}'
+
+- lineinfile: dest=/tmp/common.env regexp='^CASSANDRA_LISTEN_ADDRESS' line='CASSANDRA_LISTEN_ADDRESS={{ listen_address }}'
+
+- lineinfile: dest=/tmp/common.env regexp='^CASSANDRA_SEEDS' line='CASSANDRA_SEEDS={{ cluster_master }}'
+  when: cluster_master != listen_address
+
+- lineinfile: dest=/tmp/common.env regexp='^RABBIT_MASTER_HOST' line='RABBIT_MASTER_HOST={{ cluster_master_hostname }}'
+  when: cluster_master != listen_address
+
+- lineinfile: dest=/tmp/common.env regexp='^RABBIT_MASTER_HOST' line='RABBIT_MASTER_HOST='
+  when: cluster_master == listen_address
+
+- lineinfile: dest=/tmp/common.env regexp='^contrail_webui_job__analytics_server_ip' line='contrail_webui_job__analytics_server_ip={{ analytics_vip }}'
+- lineinfile: dest=/tmp/common.env regexp='^contrail_webui_job__config_api_vip' line='contrail_webui_job__config_api_vip={{ controller_vip }}'
+- lineinfile: dest=/tmp/common.env regexp='^contrail_webui_job__cassandra_server_list' line='contrail_webui_job__cassandra_server_list={{ cassandra_listen_address_wo_port_string }}'
+
+- lineinfile: dest=/tmp/common.env regexp='^admin_user' line='admin_user={{ admin_user }}'
+- lineinfile: dest=/tmp/common.env regexp='^admin_password' line='admin_password={{ admin_password }}'
+- lineinfile: dest=/tmp/common.env regexp='^admin_token' line='admin_token={{ admin_token }}'
+- lineinfile: dest=/tmp/common.env regexp='^admin_tenant' line='admin_tenant={{ admin_tenant }}'
+
+#- debug: msg="{{ cassandra_seeds }}"
+
+- name: Pull Containers
+  command: docker pull "{{ REGISTRY }}/{{ item }}:{{ VERSION }}-{{ BUILD }}"
+  with_items: "{{ services }}"
+  when: state == "present"
+
+- docker_service:
+    project_name: contrail-controller
+    state: "{{ state }}"
+    definition:
+      version: '2'
+      services:
+        controller-network:
+          env_file: "/tmp/common.env"
+          image: "{{ REGISTRY }}/network:{{VERSION}}-{{ BUILD }}"
+          network_mode: "host"
+          restart: always
+        contraill-config-database:
+          env_file: "/tmp/common.env"
+          image: "{{ REGISTRY }}/contrail-config-database:{{VERSION}}-{{ BUILD }}"
+          network_mode: "service:controller-network"
+          restart: always
+        zookeeper:
+          env_file: "/tmp/common.env"
+          image: "{{ REGISTRY }}/zookeeper:{{VERSION}}-{{ BUILD }}"
+          network_mode: "service:controller-network"
+          restart: always
+        ifmap-server:
+          env_file: "/tmp/common.env"
+          image: "{{ REGISTRY }}/ifmap-server:{{VERSION}}-{{ BUILD }}"
+          network_mode: "service:controller-network"
+          restart: always
+          depends_on:
+            - zookeeper
+        rabbitmq:
+          env_file: "/tmp/common.env"
+          image: "{{ REGISTRY }}/rabbitmq:{{VERSION}}-{{ BUILD }}"
+          volumes:
+            - /etc/hosts:/etc/hosts
+          environment:
+            - RABBITMQ_NODE_IP_ADDRESS=0.0.0.0
+            - RABBITMQ_ERLANG_COOKIE=contrail
+          network_mode: "service:controller-network"
+          restart: always
+        redis:
+          env_file: "/tmp/common.env"
+          image: "{{ REGISTRY }}/redis:{{VERSION}}-{{ BUILD }}"
+          network_mode: "service:controller-network"
+          restart: always
+        contrail-api:
+          env_file: "/tmp/common.env"
+          image: "{{ REGISTRY }}/contrail-api:{{VERSION}}-{{ BUILD }}"
+          network_mode: "service:controller-network"
+          restart: always
+          depends_on:
+            - ifmap-server
+            - contraill-config-database
+        contrail-schema:
+          env_file: "/tmp/common.env"
+          image: "{{ REGISTRY }}/contrail-schema:{{VERSION}}-{{ BUILD }}"
+          network_mode: "service:controller-network"
+          restart: always
+          depends_on:
+            - contrail-api
+        contrail-svc-monitor:
+          env_file: "/tmp/common.env"
+          image: "{{ REGISTRY }}/contrail-svc-monitor:{{VERSION}}-{{ BUILD }}"
+          network_mode: "service:controller-network"
+          restart: always
+          depends_on:
+            - contrail-api
+        contrail-device-manager:
+          env_file: "/tmp/common.env"
+          image: "{{ REGISTRY }}/contrail-device-manager:{{VERSION}}-{{ BUILD }}"
+          network_mode: "service:controller-network"
+          restart: always
+          depends_on:
+            - contrail-api
+        contrail-discovery:
+          env_file: "/tmp/common.env"
+          image: "{{ REGISTRY }}/contrail-discovery:{{VERSION}}-{{ BUILD }}"
+          network_mode: "service:controller-network"
+          restart: always
+          depends_on:
+            - contrail-api
+        contrail-control:
+          env_file: "/tmp/common.env"
+          image: "{{ REGISTRY }}/contrail-control:{{VERSION}}-{{ BUILD }}"
+          network_mode: "service:controller-network"
+          restart: always
+          depends_on:
+            - contrail-api
+        contrail-named:
+          env_file: "/tmp/common.env"
+          image: "{{ REGISTRY }}/contrail-named:{{VERSION}}-{{ BUILD }}"
+          network_mode: "service:controller-network"
+          restart: always
+          volumes_from:
+            - contrail-dns
+          depends_on:
+            - contrail-api
+            - contrail-dns
+          privileged: true
+          pid: "host"
+        contrail-dns:
+          env_file: "/tmp/common.env"
+          image: "{{ REGISTRY }}/contrail-dns:{{VERSION}}-{{ BUILD }}"
+          network_mode: "service:controller-network"
+          restart: always
+          volumes:
+            - /etc/contrail
+            - /var/log/contrail
+          depends_on:
+            - contrail-api
+          privileged: true
+          pid: "host"
+        contrail-webui-job:
+          env_file: "/tmp/common.env"
+          image: "{{ REGISTRY }}/contrail-webui-job:{{VERSION}}-{{ BUILD }}"
+          network_mode: "service:controller-network"
+          restart: always
+          depends_on:
+            - contrail-api
+        contrail-webui-server:
+          env_file: "/tmp/common.env"
+          image: "{{ REGISTRY }}/contrail-webui-server:{{VERSION}}-{{ BUILD }}"
+          network_mode: "service:controller-network"
+          restart: always
+          depends_on:
+            - contrail-api
+  register: output
+
+- set_fact:
+    contrail_api_name: "{{ item.key }}"
+  with_dict: "{{ output['ansible_facts']['contrail-api'] }}"
+  when: (state == "present" and output.ansible_facts is defined)
+
+- set_fact:
+    contrail_control_name: "{{ item.key }}"
+  with_dict: "{{ output['ansible_facts']['contrail-control'] }}"
+  when: (state == "present" and output.ansible_facts is defined)

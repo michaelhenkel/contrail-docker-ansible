@@ -1,0 +1,11 @@
+FROM ubuntu:14.04.4
+ENV DEBIAN_FRONTEND noninteractive
+RUN sed -i "s/archive.ubuntu.com/us.archive.ubuntu.com/g" /etc/apt/sources.list
+RUN echo "deb [trusted=yes] http://{{ ansible_default_ipv4['address'] }}:8888/contrail amd64/" >> /etc/apt/sources.list
+RUN apt-get update
+RUN apt-get install -y --force-yes contrail-utils python-contrail contrail-lib \
+     contrail-control contrail-dns python-iniparse
+COPY entrypoint.sh /
+COPY openstack-config /
+ENTRYPOINT ["/entrypoint.sh"]
+CMD ["/usr/bin/contrail-named","-f","-g","-u","contrail","-c","/etc/contrail/dns/contrail-named.conf"]

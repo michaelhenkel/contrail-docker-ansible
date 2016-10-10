@@ -1,0 +1,11 @@
+FROM ubuntu:14.04.4
+ENV DEBIAN_FRONTEND noninteractive
+RUN sed -i "s/archive.ubuntu.com/us.archive.ubuntu.com/g" /etc/apt/sources.list
+RUN apt-get update
+RUN apt-get install -y wget apache2 dpkg-dev
+RUN wget http://10.84.5.120/github-build/{{ BRANCH }}/{{ BUILD }}/ubuntu-14-04/{{ OS_VERSION }}/contrail-install-packages_{{ VERSION }}-{{ BUILD }}~{{ OS_VERSION }}_all.deb
+RUN dpkg -i contrail-install-packages_{{ VERSION }}-{{ BUILD }}~{{ OS_VERSION }}_all.deb
+RUN mkdir -p /var/www/html/contrail/amd64
+RUN tar zxvf /opt/contrail/contrail_packages/contrail_debs.tgz -C /var/www/html/contrail/amd64
+RUN cd /var/www/html/contrail/ && dpkg-scanpackages amd64 |gzip -9c > amd64/Packages.gz
+CMD ["/usr/sbin/apache2ctl","-D","FOREGROUND"]

@@ -1,0 +1,23 @@
+---
+variables:
+  vip: 192.168.1.200
+  contrail_svc_monitor__DEFAULTS__ifmap_server_port: 1234
+  contrail_svc_monitor__DEFAULTS__ifmap_server: 1.1.1.1
+
+services:
+  - contrail-api
+  - contrail-schema
+  - contrail-svc-monitor
+  - contrail-device-manager
+  - contrail-discovery
+  - contrail-config-database
+  - contrail-control
+  - contrail-dns
+  - contrail-named
+  - contrail-webui-job
+  - contrail-webui-server
+  - ifmap-server
+  - redis
+  - zookeeper
+  - network
+  - rabbitmq  

@@ -1,0 +1,20 @@
+---
+
+- name: "Create Working Dir"
+  file: path="/tmp/{{ item }}" state=directory mode=0755
+  with_items: "{{ services }}"
+
+- name: Create Dockerfile
+  template: src=Dockerfile_{{ item }}.j2 dest=/tmp/{{ item }}/Dockerfile
+  with_items: "{{ services }}"
+
+- name: Call file checker
+  include: file_checker.yml
+  with_items: "{{ services }}"
+
+- name: "Build Container"
+  docker_image:
+    path: "/tmp/{{ item }}"
+    name: "{{ item }}"
+    tag: "{{ VERSION }}-{{ BUILD }}"
+  with_items: "{{ services }}"

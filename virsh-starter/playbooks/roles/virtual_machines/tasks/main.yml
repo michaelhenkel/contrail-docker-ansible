@@ -1,0 +1,4 @@
+---
+- name: prepare vms
+  include: prep_vm.yml
+  with_dict: "{{ virtual_machines }}"

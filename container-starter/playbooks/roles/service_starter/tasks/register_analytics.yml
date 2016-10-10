@@ -1,0 +1,3 @@
+---
+- name: Register Contrail Analytics API
+  command: "docker exec -d {{ contrail_analytics_api_name }} bash -c /register_analytics.sh"

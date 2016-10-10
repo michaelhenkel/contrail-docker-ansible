@@ -1,0 +1,27 @@
+---
+services:
+  - contrail-api
+  - contrail-schema
+  - contrail-svc-monitor
+  - contrail-device-manager
+  - contrail-discovery
+  - contrail-config-database
+  - contrail-analytics-api
+  - contrail-alarm-gen
+  - contrail-collector
+  - contrail-query-engine
+  - contrail-snmp-collector
+  - contrail-topology
+  - contrail-analytics-database
+  - contrail-control
+  - contrail-dns
+  - contrail-named
+  - contrail-webui-job
+  - contrail-webui-server
+  - ifmap-server 
+  - redis
+  - zookeeper
+  - network
+  - rabbitmq
+  - contrail-vrouter-agent
+  - opencontrail-libnetwork

@@ -1,0 +1,6 @@
+---
+- name: Register Contrail API
+  command: "docker exec -d {{ contrail_api_name }} bash -c /register_config.sh"
+
+- name: Register Contrail Control
+  command: "docker exec -d {{ contrail_control_name }} bash -c /register_control.sh"

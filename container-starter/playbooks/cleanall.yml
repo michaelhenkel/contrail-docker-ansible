@@ -1,0 +1,4 @@
+---
+- hosts: all
+  tasks:
+  - command: bash -c "for i in `docker volume list|grep -v VOLUME|awk '{print $2}'`; do docker volume rm $i;done"

@@ -1,0 +1,15 @@
+FROM ubuntu:14.04.4
+ENV DEBIAN_FRONTEND noninteractive
+RUN sed -i "s/archive.ubuntu.com/us.archive.ubuntu.com/g" /etc/apt/sources.list
+RUN echo "deb [trusted=yes] http://{{ ansible_default_ipv4['address'] }}:8888/contrail amd64/" >> /etc/apt/sources.list
+RUN apt-get update
+COPY entrypoint.sh /
+COPY openstack-config /
+RUN apt-get install -y --force-yes supervisor contrail-utils python-contrail contrail-lib \
+     contrail-web-core contrail-web-controller
+RUN ln -s /usr/bin/node /usr/bin/nodejs
+WORKDIR /var/lib/contrail-webui/contrail-web-core
+COPY build-files.sh /var/lib/contrail-webui/contrail-web-core
+RUN mkdir /var/log/contrail
+ENTRYPOINT ["/entrypoint.sh"]
+CMD ["/usr/bin/nodejs","webServerStart.js"]

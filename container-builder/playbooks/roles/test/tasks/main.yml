@@ -1,0 +1,12 @@
+---
+- name: tst
+  stat: path="{{ role_path }}/file/"
+  register: st
+     
+- debug: msg="exists {{ st.stat }}"
+  when: st.stat.isdir is defined and st.stat.isdir
+
+- include: 1.yml
+  when: st.stat.isdir is defined and st.stat.isdir
+
+- debug: msg="{{ role_path }}"

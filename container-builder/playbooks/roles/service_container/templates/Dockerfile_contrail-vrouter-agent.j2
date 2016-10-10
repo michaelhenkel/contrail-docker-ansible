@@ -1,0 +1,25 @@
+FROM ubuntu:14.04.4
+ENV DEBIAN_FRONTEND noninteractive
+RUN sed -i "s/archive.ubuntu.com/us.archive.ubuntu.com/g" /etc/apt/sources.list
+RUN echo "deb [trusted=yes] http://{{ ansible_default_ipv4['address'] }}:8888/contrail amd64/" >> /etc/apt/sources.list
+RUN apt-get update
+RUN apt-get install -y --force-yes linux-headers-`uname -r` \
+     software-properties-common \
+     python-iniparse \
+     contrail-utils \
+     python-contrail \
+     contrail-lib \
+     contrail-vrouter-source \
+     contrail-vrouter-agent \
+     contrail-vrouter-dkms \
+     contrail-vrouter-utils  
+#     contrail-vrouter-init
+RUN add-apt-repository -y ppa:ubuntu-toolchain-r/test
+RUN apt-get update
+RUN apt-get install -y gcc-4.9 g++-4.9 cpp-4.9
+
+COPY entrypoint.sh /
+COPY openstack-config /
+COPY vrouter-functions.sh /
+ENTRYPOINT ["/entrypoint.sh"]
+CMD ["/usr/bin/contrail-vrouter-agent"]

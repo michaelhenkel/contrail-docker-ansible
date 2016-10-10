@@ -1,0 +1,17 @@
+---
+- name: Create Dockerfile
+  template: src=Dockerfile.j2 dest=/tmp/Dockerfile
+
+- name: Build Contrail Base Container
+  docker_image:
+    path: /tmp
+    name: contrail-base
+    tag: "{{ VERSION }}-{{ BUILD }}"
+
+- name: Run Contrail Base Container
+  docker_container:
+    name: "contrail-base"
+    image: "contrail-base:{{ VERSION }}-{{ BUILD }}"
+    state: started
+    ports:
+      - 8888:80

@@ -1,0 +1,39 @@
+---
+- name: Set Cluster Master
+  set_fact:
+    cluster_master={{ hostvars[groups['analytics-db'][0]]['listen_address'] }}
+
+- file: path=/tmp/analytics_db_common.env state=touch
+
+- name: Add Extra Vars
+  template: src=all_vars.env.j2 dest=/tmp/analytics_db_common.env force=true
+  when: variables is defined and variables
+
+- lineinfile: dest=/tmp/analytics_db_common.env regexp='^CASSANDRA_SEEDS' line='CASSANDRA_SEEDS={{ cluster_master }}'
+  when: cluster_master != listen_address
+
+- debug: msg="{{ services }}"
+
+- name: Pull Containers
+  command: docker pull "{{ REGISTRY }}/{{ item }}:{{ VERSION }}-{{ BUILD }}"
+  with_items: "{{ services }}"
+
+- docker_service:
+    project_name: contrail-controller
+    state: "{{ state }}"
+    definition:
+      version: '2'
+      services:
+        analytics-db-network:
+          env_file: "/tmp/analytics_db_common.env"
+          image: "{{ REGISTRY }}/network:{{VERSION}}-{{ BUILD }}"
+          network_mode: "host"
+          restart: always
+        analytics-database:
+          env_file: "/tmp/analytics_db_common.env"
+          image: "{{ REGISTRY }}/contrail-analytics-database:{{VERSION}}-{{ BUILD }}"
+          network_mode: "service:analytics-db-network"
+          restart: always
+  register: output
+
+- debug: var=output

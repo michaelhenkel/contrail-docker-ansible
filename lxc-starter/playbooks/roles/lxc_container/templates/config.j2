@@ -1,0 +1,24 @@
+# Template used to create this container: /usr/share/lxc/templates/lxc-download
+# Parameters passed to the template: -d ubuntu -r xenial -a amd64
+# For additional config options, please look at lxc.container.conf(5)
+
+# Distribution configuration
+lxc.include = /usr/share/lxc/config/ubuntu.common.conf
+lxc.arch = x86_64
+
+# Container specific configuration
+lxc.rootfs = /var/lib/lxc/{{ item.key }}/rootfs
+lxc.utsname = {{ item.key }}
+
+# Network configuration
+lxc.network.type = veth
+lxc.network.flags = up
+lxc.network.script.up = /etc/lxc/ifup
+lxc.network.script.down = /etc/lxc/ifdown
+lxc.network.veth.pair = {{ item.key }}
+lxc.network.hwaddr = {{ item.value.mac}}
+lxc.network.ipv4 = {{ item.value.ip }}/24
+lxc.network.ipv4.gateway = {{ gateway }}
+lxc.aa_profile = unconfined
+lxc.cgroup.devices.allow = a
+lxc.cap.drop =

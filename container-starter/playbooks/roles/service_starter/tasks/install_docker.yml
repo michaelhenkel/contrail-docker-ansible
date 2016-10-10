@@ -1,0 +1,51 @@
+---
+
+- name: Install Docker Apt Sources Key
+  apt_key: keyserver=hkp://p80.pool.sks-keyservers.net:80 id=58118E89F3A912897C070ADBF76221572C52609D
+  when: ansible_distribution == "Ubuntu"
+
+- name: Setup Docker Apt Sources Ubuntu 14.04 LTS
+  apt_repository: repo='deb https://apt.dockerproject.org/repo ubuntu-trusty main' state=present
+  when: (ansible_distribution == "Ubuntu" and ansible_distribution_version == "14.04")
+
+- name: Setup Docker Apt Sources Ubuntu 16.04 LTS
+  apt_repository: repo='deb https://apt.dockerproject.org/repo ubuntu-xenial main' state=present
+  when: (ansible_distribution == "Ubuntu" and ansible_distribution_version == "16.04")
+
+- name: Setup Docker Yum Repo RedHat/CentOS
+  yum_repository:
+    name: Docker Repository
+    description: Docker Repository
+    baseurl: https://yum.dockerproject.org/repo/main/centos/7/
+    gpgcheck: yes
+    gpgcakey: https://yum.dockerproject.org/gpg
+  when: ansible_os_family == "RedHat"
+
+- name: Install docker-engine
+  package: name=docker-engine state=latest
+
+- name: Install python-pip
+  package: name=python-pip state=latest
+
+- name: Update python-pip
+  pip: name=pip state=latest
+
+- name: Install python-yaml
+  package: name=python-yaml state=latest
+
+- name: Install docker-compose
+  get_url:
+    url: https://github.com/docker/compose/releases/download/1.8.0/docker-compose-Linux-x86_64
+    dest: /usr/local/bin/docker-compose
+    mode: 0774
+
+- name: Update docker-compose
+  pip: name=docker-compose
+
+- name: Downgrade docker-py
+  pip: name=docker-py version=1.9.0
+
+- name: Start Docker service
+  service: name=docker state=started
+
+#apt-key adv --keyserver hkp://p80.pool.sks-keyservers.net:80 --recv-keys 58118E89F3A912897C070ADBF76221572C52609D

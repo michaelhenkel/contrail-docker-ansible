@@ -1,0 +1,11 @@
+---
+gateway: 192.168.1.4
+virtual_machines:
+  comp1: 
+    ip: 192.168.1.140
+    mac: de:ad:be:ef:ba:41
+    distro: ubuntu
+  comp2: 
+    ip: 192.168.1.141
+    mac: de:ad:be:ef:ba:42
+    distro: ubuntu

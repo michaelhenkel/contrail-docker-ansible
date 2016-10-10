@@ -1,0 +1,32 @@
+---
+- debug: msg="{{ item.key }}.qcow2"
+
+#- name: copy image
+#  copy: src="{{ item.value.distro }}.qcow2" dest="/var/lib/libvirt/images/{{ item.key }}.qcow2"
+
+- name: create virsh config
+  template: src=comp.xml dest="/tmp/{{ item.key }}.xml"
+
+- name: mount ubuntu image
+  command: "guestmount -a /var/lib/libvirt/images/{{ item.key }}.qcow2 -m /dev/comp1-vg/root /mnt"
+  when: item.value.distro == "ubuntu"
+
+- name: copy auth keys
+  copy: src=authorized_keys dest="/mnt/root/.ssh/authorized_keys" mode=0600
+
+- name: create cert dir
+  file: path="/mnt/usr/local/share/ca-certificates/docker-dev-cert/" state=directory mode=0755
+
+- name: copy cert
+  copy: src=devdockerCA.crt dest="/mnt/usr/local/share/ca-certificates/docker-dev-cert/devdockerCA.crt"
+
+- name: umount image
+  command: umount /mnt
+
+- add_host: name="{{ item.value.ip }}" groups=compute_vms
+
+- name: register vm
+  command: "virsh define /tmp/{{ item.key }}.xml" 
+
+- name: start vm
+  command: "virsh start {{ item.key }}"

@@ -1,0 +1,8 @@
+---
+services:
+  - contrail-analytics-api
+  - contrail-collector
+  - contrail-topology
+  - contrail-query-engine
+  - contrail-snmp-collector
+  - contrail-alarm-gen
